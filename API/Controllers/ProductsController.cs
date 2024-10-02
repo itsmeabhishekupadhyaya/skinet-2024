@@ -1,5 +1,6 @@
 using Core.Entities;
 using Core.Interfaces;
+using Core.Specifications;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -16,8 +17,12 @@ namespace API.Controllers
         [HttpGet]
         public async Task<ActionResult<IReadOnlyList<Product>>> GetProducts(string? brand,string? type,string? sort)
         {
-           return  Ok( await repo.ListAllAsync());
+            var spec =new ProductSpecification(brand,type,sort);
+            var products = await repo.ListAsync(spec);
+
+           return  Ok( products);
         }
+
 
         [HttpGet("{id:int}")]
         public async Task<ActionResult<Product>>GetProduct(int id)
@@ -62,17 +67,17 @@ namespace API.Controllers
         return BadRequest("Unable to Delete");
     }
 
-//      [HttpGet("brands")]
+     [HttpGet("brands")]
 
-//         public async Task<ActionResult<IReadOnlyList<string>>> GetBrands()
-//         {
-//             return Ok(await repo.GetBrandsAsync());
-//         }
-// [HttpGet("types")]
-//         public async Task<ActionResult<IReadOnlyList<string>>> GetTypes()
-//         {
-//             return Ok(await repo.GetTypesAsync());
-//         }
+        public async Task<ActionResult<IReadOnlyList<string>>> GetBrands()
+        {
+            return Ok();
+        }
+[HttpGet("types")]
+        public async Task<ActionResult<IReadOnlyList<string>>> GetTypes()
+        {
+            return Ok();
+        }
         public bool ProductExist(int id)
         {
             return repo.Exists(id);

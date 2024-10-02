@@ -1,3 +1,4 @@
+using API.RequestHelpers;
 using Core.Entities;
 using Core.Interfaces;
 using Core.Specifications;
@@ -10,25 +11,25 @@ namespace API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ProductsController(IGenericRepository<Product> repo) : ControllerBase
+    public class ProductsController(IGenericRepository<Product> repo) : BaseApiController
     {
-       
+
 
         [HttpGet]
-        public async Task<ActionResult<IReadOnlyList<Product>>> GetProducts(string? brand,string? type,string? sort)
+        public async Task<ActionResult<IReadOnlyList<Product>>> GetProducts(
+                    [FromQuery] ProductSpecParams specParams)
         {
-            var spec =new ProductSpecification(brand,type,sort);
-            var products = await repo.ListAsync(spec);
-
-           return  Ok(products);
+            var spec = new ProductSpecification(specParams);
+            
+            return await CreatePageResult(repo, spec, specParams.PageIndex, specParams.PageSize);
         }
 
 
         [HttpGet("{id:int}")]
-        public async Task<ActionResult<Product>>GetProduct(int id)
+        public async Task<ActionResult<Product>> GetProduct(int id)
         {
             var product = await repo.GetByIdAsync(id);
-            if (product==null) return NotFound();
+            if (product == null) return NotFound();
             return product;
         }
 
@@ -36,51 +37,54 @@ namespace API.Controllers
         public async Task<ActionResult<Product>> AddProduct(Product product)
         {
             repo.Add(product);
-             if( await repo.SaveAllAsync()){
-                 return CreatedAtAction("GetProduct",new {id=product.Id},product);
-             }
-             return BadRequest("Problem creating Product");
+            if (await repo.SaveAllAsync())
+            {
+                return CreatedAtAction("GetProduct", new { id = product.Id }, product);
+            }
+            return BadRequest("Problem creating Product");
         }
         [HttpPut("{id:int}")]
-        public async Task<ActionResult>UpdateProduct(int id,Product product)
+        public async Task<ActionResult> UpdateProduct(int id, Product product)
         {
             if (product.Id != id || !ProductExist(id))
             {
                 return BadRequest("Can not update this product");
             }
             repo.Update(product);
-            if(await  repo.SaveAllAsync()){
+            if (await repo.SaveAllAsync())
+            {
                 return NoContent();
             }
             return BadRequest();
         }
 
-    [HttpDelete("{id:int}")]
-    public async Task<ActionResult> DeleteProduct(int id)
-    {
-        var product =  await repo.GetByIdAsync(id);
-        if(product == null) return NotFound();
-        repo.Remove(product);
-        if(await repo.SaveAllAsync()){
-            return CreatedAtAction("GetProduct",new {id=product.Id},product);
+        [HttpDelete("{id:int}")]
+        public async Task<ActionResult> DeleteProduct(int id)
+        {
+            var product = await repo.GetByIdAsync(id);
+            if (product == null) return NotFound();
+            repo.Remove(product);
+            if (await repo.SaveAllAsync())
+            {
+                return CreatedAtAction("GetProduct", new { id = product.Id }, product);
+            }
+            return BadRequest("Unable to Delete");
         }
-        return BadRequest("Unable to Delete");
-    }
 
-     [HttpGet("brands")]
+        [HttpGet("brands")]
 
         public async Task<ActionResult<IReadOnlyList<string>>> GetBrands()
         {
             var spec = new BrandListSpecification();
-        
-            return Ok( await repo.ListAsync(spec));
+
+            return Ok(await repo.ListAsync(spec));
         }
-[HttpGet("types")]
+        [HttpGet("types")]
         public async Task<ActionResult<IReadOnlyList<string>>> GetTypes()
         {
             var spec = new TypeListSpecification();
-        
-            return Ok( await repo.ListAsync(spec));
+
+            return Ok(await repo.ListAsync(spec));
         }
         public bool ProductExist(int id)
         {
